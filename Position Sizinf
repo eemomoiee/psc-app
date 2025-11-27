@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Position Sizing Calculator</title>
+  <meta name="theme-color" content="#0b57d0">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root{{--accent:#0b57d0}}
+    body{{font-family:Arial,Helvetica,sans-serif;background:#f3f6fb;margin:0;padding:20px}}
+    .app{{max-width:820px;margin:12px auto;padding:18px;border-radius:12px;background:#fff;box-shadow:0 6px 22px rgba(12,30,60,.08)}}
+    h1{{margin:0 0 8px;font-size:20px}}
+    label{{font-size:12px;color:#333;display:block;margin-top:12px}}
+    input,select{{padding:10px;border-radius:8px;border:1px solid #d6dbe8;width:100%}}
+    .row{{display:flex;gap:12px;flex-wrap:wrap}}
+    .col{{flex:1;min-width:150px}}
+    button{{background:var(--accent);color:#fff;padding:10px 14px;border:none;border-radius:10px;cursor:pointer;margin-top:12px}}
+    .result{{margin-top:14px;padding:12px;border-radius:10px;background:#eef7ff}}
+    .small{{font-size:12px;color:#666;margin-top:8px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Position Sizing Calculator</h1>
+  <div class="small">Position Size — PWA ready. Installable on Android/Desktop.</div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="col">
+      <label>Account Balance (USDT)</label>
+      <input id="balance" type="number" value="1000">
+    </div>
+    <div class="col">
+      <label>Risk %</label>
+      <input id="riskPercent" type="number" value="1">
+    </div>
+    <div class="col">
+      <label>Leverage (x)</label>
+      <input id="leverage" type="number" value="1" min="1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <label>Entry Price</label>
+      <input id="entry" type="number" value="2.5">
+    </div>
+    <div class="col">
+      <label>Stop Loss Price</label>
+      <input id="stop" type="number" value="2.3">
+    </div>
+    <div class="col">
+      <label>Direction</label>
+      <select id="direction"><option value="long">Long</option><option value="short">Short</option></select>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="col"><label>TP1</label><input id="tp1" type="number" placeholder="2.8"></div>
+    <div class="col"><label>TP2 (optional)</label><input id="tp2" type="number" placeholder=""></div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <div class="col"><label>Risk:Reward target (optional)</label><input id="rr" type="number" value="2"></div>
+    <div class="col"><label>Fee / Slippage % (entry+exit est)</label><input id="feePercent" type="number" value="0.10"></div>
+  </div>
+
+  <button onclick="calculate()">Calculate Position Size</button>
+  <button onclick="resetDemo()" style="background:#2dbe60;margin-left:8px">Reset</button>
+
+  <div id="result" class="result" style="display:none"></div>
+  <div class="small">To build an Android APK: upload this hosted site to GitHub Pages or Netlify, then use PWABuilder or Bubblewrap to generate the APK/TWA. A Bubblewrap config is included in this package.</div>
+</div>
+
+<script>
+function format(n){return Number(n).toLocaleString(undefined,{{maximumFractionDigits:6}})}
+function calculate(){{
+  const balance = parseFloat(document.getElementById('balance').value)||0;
+  const riskPercent = parseFloat(document.getElementById('riskPercent').value)||0;
+  const leverage = parseFloat(document.getElementById('leverage').value)||1;
+  const entry = parseFloat(document.getElementById('entry').value);
+  const stop = parseFloat(document.getElementById('stop').value);
+  const tp1 = parseFloat(document.getElementById('tp1').value||NaN);
+  const tp2 = parseFloat(document.getElementById('tp2').value||NaN);
+  const rrTarget = parseFloat(document.getElementById('rr').value||NaN);
+  const feePercent = parseFloat(document.getElementById('feePercent').value||0);
+  const direction = document.getElementById('direction').value;
+
+  if(!balance||!riskPercent||!entry||!stop){ alert('Please fill Balance, Risk %, Entry and Stop'); return; }
+  const riskAmount = balance*(riskPercent/100);
+  const priceDiff = Math.abs(entry-stop);
+  if(priceDiff===0){ alert('Entry and Stop cannot be the same'); return; }
+  const rawSize = riskAmount/priceDiff;
+  const positionNotional = rawSize*entry;
+  const requiredMargin = positionNotional/leverage;
+  const estimatedFee = (feePercent/100) * positionNotional * 2;
+
+  let suggestedTP = null;
+  if(!isNaN(rrTarget)&&rrTarget>0){ const profitTarget = riskAmount*rrTarget; suggestedTP = (direction==='long') ? entry + (profitTarget/rawSize) : entry - (profitTarget/rawSize); }
+
+  let html = `<strong>Position Size:</strong> ${format(rawSize)} tokens<br>`;
+  html += `<strong>Notional:</strong> $${format(positionNotional)}<br>`;
+  html += `<strong>Required Margin (with leverage):</strong> $${format(requiredMargin)}<br>`;
+  html += `<strong>Risk Amount:</strong> $${format(riskAmount)} (${riskPercent}% of balance)<br>`;
+  html += `<strong>Estimated fees:</strong> $${format(estimatedFee)}<br>`;
+  if(!isNaN(tp1)){ html += `<br><strong>TP1 = ${tp1} → R:R ≈ ${computeRR(tp1,entry,rawSize,riskAmount).toFixed(2)}:1</strong>`; }
+  if(!isNaN(tp2)){ html += `<br><strong>TP2 = ${tp2} → R:R ≈ ${computeRR(tp2,entry,rawSize,riskAmount).toFixed(2)}:1</strong>`; }
+  if(suggestedTP){ html += `<br><strong>Suggested TP (for RR target):</strong> ${suggestedTP.toFixed(6)}`; }
+
+  const el = document.getElementById('result'); el.style.display='block'; el.innerHTML=html;
+}}
+
+function computeRR(tp,entry,size,riskAmount){ const profitPerToken = Math.abs(tp-entry); const grossProfit = profitPerToken*size; return grossProfit/riskAmount; }
+function resetDemo(){ document.getElementById('balance').value=1000; document.getElementById('riskPercent').value=1; document.getElementById('entry').value=2.5; document.getElementById('stop').value=2.3; document.getElementById('tp1').value=2.8; document.getElementById('tp2').value=''; document.getElementById('leverage').value=1; document.getElementById('feePercent').value=0.10; document.getElementById('result').style.display='none'; }
+resetDemo();
+</script>
+
+</body>
+</html>
+
+{
+  "name": "Position Sizing Calculator",
+  "short_name": "PSC",
+  "description": "Position Size",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b57d0",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
+const CACHE_NAME = 'psc-app-shell-v1';
+const urlsToCache = [
+  '.',
+  'index.html',
+  'manifest.json',
+  'icon-192.png',
+  'icon-512.png',
+  'icon-maskable.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(resp => resp || fetch(event.request))
+  );
+});
+{
+  "packageId": "com.example.position_sizing",
+  "host": "example.com",
+  "applicationName": "Position Sizing Calculator",
+  "appVersionName": "1.0",
+  "appVersionCode": 1,
+  "launcherName": "PSC",
+  "display": "standalone",
+  "startUrl": "."
+}
+Position Sizing Calculator — APK-ready package
+
+This package contains a PWA (Progressive Web App) ready to be hosted and converted into an Android APK/TWA.
+
+Files included:
+- index.html
+- manifest.json
+- service-worker.js
+- icon-192.png
+- icon-512.png
+- icon-maskable.png
+- bubblewrap-config.json
+
+Quick steps to produce an APK:
+
+1) Host the contents on GitHub Pages / Netlify / Vercel.
+   - For GitHub Pages: create a repository, push these files to the `gh-pages` or `main` branch and enable GitHub Pages.
+   - For Netlify / Vercel: drag-and-drop the folder or connect the repo.
+
+2) Ensure your site is served over HTTPS (GitHub Pages / Netlify / Vercel provide HTTPS).
+
+3) Go to https://www.pwabuilder.com or use Bubblewrap:
+   - PWABuilder: enter your live site URL, follow prompts to build an Android package (APK or App Bundle).
+   - Bubblewrap (command-line): use the included bubblewrap-config.json as reference.
+     Example (after installing bubblewrap):
+       bubblewrap init --manifest=https://yourdomain/manifest.json
+       bubblewrap build
+
+4) Signing & publishing:
+   - PWABuilder can produce unsigned or signed packages. To publish on Google Play you will need to sign and prepare store listing.
+
+Notes:
+- In bubblewrap-config.json replace "host" with your hosted domain (example: myusername.github.io or yoursite.com).
+- I included simple service-worker caching; adjust caching strategies for production as needed.
