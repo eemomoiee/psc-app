@@ -118,33 +118,6 @@ resetDemo();
 </body>
 </html>
 
-{
-  "name": "Position Sizing Calculator",
-  "short_name": "PSC",
-  "description": "Position Size",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0b57d0",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ]
-}
 const CACHE_NAME = 'psc-app-shell-v1';
 const urlsToCache = [
   '.',
@@ -215,3 +188,30 @@ Quick steps to produce an APK:
 Notes:
 - In bubblewrap-config.json replace "host" with your hosted domain (example: myusername.github.io or yoursite.com).
 - I included simple service-worker caching; adjust caching strategies for production as needed.
+{
+  "name": "Position Sizing Calculator",
+  "short_name": "PSC",
+  "description": "Position Size",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b57d0",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
