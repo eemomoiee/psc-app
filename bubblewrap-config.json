@@ -1,0 +1,10 @@
+{
+  "packageId": "com.example.position_sizing",
+  "host": "example.com",
+  "applicationName": "Position Sizing Calculator",
+  "appVersionName": "1.0",
+  "appVersionCode": 1,
+  "launcherName": "PSC",
+  "display": "standalone",
+  "startUrl": "."
+}
